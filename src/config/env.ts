@@ -1,55 +1,125 @@
+import fs from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
+
   PORT: z.coerce.number().int().positive().default(3001),
+
   HOST: z.string().default("0.0.0.0"),
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
 
-  // Public origin used to build shareable participant links, e.g. https://domain.com/chat/{refCode}
-  PUBLIC_BASE_URL: z.string().url().default("http://localhost:3001"),
+  // Public origin used to build shareable participant links
+  // e.g. https://domain.com/chat/{refCode}
+  PUBLIC_BASE_URL: z
+    .string()
+    .url()
+    .default("http://localhost:3001"),
 
-  JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
-  CORS_ORIGIN: z.string().min(16, "CORS_ORIGIN is required, e.g. https://domain.com or https://*.domain.com"),
+  JWT_SECRET: z
+    .string()
+    .min(16, "JWT_SECRET must be at least 16 characters"),
 
-  CLICK_LOG_BATCH_SIZE: z.coerce.number().int().positive().default(100),
-  CLICK_LOG_BATCH_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
-  CLICK_LOG_FINGERPRINT_TTL_SECONDS: z.coerce.number().int().positive().default(86_400),
+  CORS_ORIGIN: z
+    .string()
+    .min(
+      1,
+      "CORS_ORIGIN is required, e.g. https://domain.com or https://*.domain.com"
+    ),
 
-  // Global rate limit — applies to every route as a baseline abuse guard.
-  RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(300),
-  RATE_LIMIT_GLOBAL_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  CLICK_LOG_BATCH_SIZE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(100),
 
-  // Tighter, per-refCode limit specifically on the redirect route, since
-  // that's the endpoint a click-flood attack actually targets.
-  RATE_LIMIT_REDIRECT_MAX: z.coerce.number().int().positive().default(20),
-  RATE_LIMIT_REDIRECT_WINDOW_MS: z.coerce.number().int().positive().default(10_000),
+  CLICK_LOG_BATCH_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(1000),
+
+  CLICK_LOG_FINGERPRINT_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(86_400),
+
+  // Global rate limit
+  RATE_LIMIT_GLOBAL_MAX: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(300),
+
+  RATE_LIMIT_GLOBAL_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60_000),
+
+  // Redirect route rate limit
+  RATE_LIMIT_REDIRECT_MAX: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(20),
+
+  RATE_LIMIT_REDIRECT_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10_000),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 function loadEnv(): Env {
-  process.loadEnvFile()
+  /**
+   * Load .env only when it exists.
+   *
+   * In production/Docker, environment variables should normally
+   * be provided by the container/platform instead of requiring
+   * a .env file inside the image.
+   */
+  const envPath = path.resolve(process.cwd(), ".env");
+
+  if (fs.existsSync(envPath)) {
+    try {
+      process.loadEnvFile(envPath);
+    } catch (error) {
+      console.error("❌ Failed to load .env file:", error);
+      process.exit(1);
+    }
+  }
+
   const parsed = envSchema.safeParse(process.env);
+
   if (!parsed.success) {
-    
-    // preview all environment variables in the error message for easier debugging
-    const envVars = Object.entries(process.env)
-      .map(([key, value]) => `${key}=${value}`)
-      .join("\n");
+    console.error(
+      "❌ Invalid environment configuration:",
+      parsed.error.flatten().fieldErrors
+    );
 
-      // find database url in the env vars and display the value
-      const envValue = envVars.split("\n").filter((line) => line.startsWith("DATABASE_URL=")).join("\n");
-    
-    // eslint-disable-next-line no-console
-    console.error("Current environment variables:\n", envValue);
+    // Only show the specific variables that are useful for debugging.
+    // Do NOT print all environment variables because they may contain
+    // passwords, tokens, API keys, or other secrets.
+    const missingOrInvalid = parsed.error.flatten().fieldErrors;
 
-    // eslint-disable-next-line no-console
-    console.error("❌ Invalid environment configuration:", parsed.error.flatten().fieldErrors);
+    console.error(
+      "Environment configuration errors:",
+      JSON.stringify(missingOrInvalid, null, 2)
+    );
+
     process.exit(1);
   }
+
   return parsed.data;
 }
 

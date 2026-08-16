@@ -43,7 +43,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-referral}:${POSTGRES_PASSWORD:-referral}@postgres:5432/${POSTGRES_DB:-referral_app}?schema=public
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:-referral}
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,7 +71,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-referral}:${POSTGRES_PASSWORD:-referral}@postgres:5432/${POSTGRES_DB:-referral_app}?schema=public
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: ${REDIS_URL:-referral}
     depends_on:
       postgres:
         condition: service_healthy
