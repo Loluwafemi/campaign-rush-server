@@ -32,24 +32,18 @@ export async function buildApp() {
   // `credentials: true` is deliberately omitted — that flag exists
   // for cookie/HTTP-auth CORS and would only widen the attack surface
   // here for no benefit.
-  const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean);
-  await app.register(cors, {
-    origin: (origin, callback) => {
-      // No Origin header at all means the request didn't come from a
-      // browser (curl, server-to-server, the click-log worker's own
-      // calls) — those aren't subject to CORS and are always allowed.
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      logger.warn({ origin }, "Blocked CORS request from disallowed origin");
-      return callback(new Error("Not allowed by CORS"), false);
-    },
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  });
+const allowedOrigins = env.CORS_ORIGIN
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+await app.register(cors, {
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
 
   await app.register(jwt, { secret: env.JWT_SECRET });
-  await app.register(clickLoggerPlugin);
   await app.register(clickLoggerPlugin);
 
   app.setErrorHandler((error, req, reply) => {
