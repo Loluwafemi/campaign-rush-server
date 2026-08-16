@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Host: the account that owns and runs referral events
+// ─────────────────────────────────────────────────────────────
+model Host {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  events       Event[]
+
+  @@map("hosts")
+}
+
+enum EventStatus {
+  ACTIVE
+  EXPIRED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Event: a time-bounded referral growth campaign
+// (e.g. "join our WhatsApp group in the next 48 hours")
+// ─────────────────────────────────────────────────────────────
+model Event {
+  id             String       @id @default(cuid())
+  hostId         String
+  host           Host         @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  name           String
+  description    String?
+  ogImageUrl     String?
+  targetGroupUrl String
+  durationHours  Int
+  expiresAt      DateTime
+  status         EventStatus  @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+
+  participants   Participant[]
+  clickLogs      ClickLog[]
+  auditLogs      EventAuditLog[]
+
+  @@index([hostId])
+  @@index([status, expiresAt])
+  @@map("events")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Participant: a referrer taking part in an event, identified by
+// a unique short refCode used to build their personal share link
+// ─────────────────────────────────────────────────────────────
+model Participant {
+  id          String     @id @default(cuid())
+  eventId     String
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  name        String
+  phoneNumber String?
+  refCode     String     @unique
+  score       Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  clickLogs   ClickLog[]
+
+  @@index([eventId])
+  @@index([eventId, score])
+  @@map("participants")
+}
+
+enum ClickStatus {
+  VALID
+  DUPLICATE
+  BOT
+}
+
+// ─────────────────────────────────────────────────────────────
+// ClickLog: append-only durable record of every redirect hit,
+// flushed asynchronously from the Redis queue by the click-log
+// worker — never written synchronously on the redirect hot path.
+// ─────────────────────────────────────────────────────────────
+model ClickLog {
+  id            String       @id @default(cuid())
+  eventId       String
+  event         Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   Participant  @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  ipHash        String       // salted hash, raw IP is never persisted
+  userAgent     String?
+  referrer      String?
+  country       String?
+  status        ClickStatus
+  clickedAt     DateTime     @default(now())
+
+  @@index([eventId, clickedAt])
+  @@index([participantId, clickedAt])
+  @@map("click_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// EventAuditLog: operational/security audit trail scoped to an
+// event — status transitions, host actions, anomaly flags. Kept
+// separate from click_logs so audit-relevant events are never
+// buried under raw click volume.
+// ─────────────────────────────────────────────────────────────
+model EventAuditLog {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  actionType String   // e.g. "EVENT_CREATED", "EVENT_EXPIRED", "SCORE_ADJUSTED"
+  metadata   Json?
+  timestamp  DateTime @default(now())
+
+  @@index([eventId, timestamp])
+  @@index([actionType])
+  @@map("event_audit_logs")
+}

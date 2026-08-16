@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-referral}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-referral}
+      POSTGRES_DB: ${POSTGRES_DB:-referral_app}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-referral}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Public-facing Fastify API — the redirect engine, host/participant
+  # APIs, and analytics endpoints all run in this one process for now
+  # (see Phase 3 notes on splitting the redirect route out later).
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-referral}:${POSTGRES_PASSWORD:-referral}@postgres:5432/${POSTGRES_DB:-referral_app}?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Click-log worker — same image as the API, different entrypoint.
+  # Runs as its own process/replica set so it can be scaled
+  # independently of request-serving capacity (see Phase 1 notes on
+  # why it uses an isolated Redis connection).
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "dist/workers/clickLogProcessor.js"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-referral}:${POSTGRES_PASSWORD:-referral}@postgres:5432/${POSTGRES_DB:-referral_app}?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # No exposed ports — this process only consumes the Redis queue
+    # and writes to Postgres, it never accepts inbound traffic.
+
+volumes:
+  pg_data:
+  redis_data:
