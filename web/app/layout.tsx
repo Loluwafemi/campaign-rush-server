@@ -1,8 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Host Dashboard — Referral Events",
-  description: "Live referral event performance for hosts.",
+  title: "Referral App — Turn Sharing Into Something People Can See",
+  description:
+    "Give every referrer a personal, trackable link, a live leaderboard, and a countdown that makes sharing worth doing.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
