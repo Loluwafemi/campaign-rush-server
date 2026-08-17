@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { FormField } from "@/components/ui/FormField";
@@ -39,7 +40,12 @@ export default function NewEventPage() {
   return (
     <main className="mx-auto max-w-lg px-6 py-10">
       <p className="text-xs uppercase tracking-widest text-accent">New event</p>
-      <h1 className="mt-1 text-xl font-semibold text-textPrimary">Launch a referral event</h1>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-textPrimary">Launch a referral event</h1>
+        <Link href="/host/templates" className="shrink-0 text-xs text-accent hover:underline">
+          Browse templates →
+        </Link>
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-lg border border-border bg-surface/80 p-6">
         <FormField

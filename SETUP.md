@@ -78,11 +78,19 @@ npm run dev               # dashboards on :3000
   (the `token` query param comes from the response of
   `POST /api/v1/participants/register` — see below)
 
+
+
 ### 7. Try the flow end-to-end
 
 ```bash
 # 1. Log in as the seeded host to get a JWT
 curl -X POST http://localhost:3001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@referralapp.dev","password":"demo-password-123"}'
+
+
+  curl -i -X POST \
+  https://campaign-rush-server-production.up.railway.app/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"demo@referralapp.dev","password":"demo-password-123"}'
 

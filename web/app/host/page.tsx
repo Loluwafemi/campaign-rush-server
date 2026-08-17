@@ -30,12 +30,17 @@ export default function HostLandingPage() {
     <main className="mx-auto max-w-2xl px-6 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-textPrimary">Your events</h1>
-        <Link
-          href="/host/events/new"
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-canvas transition hover:opacity-90"
-        >
-          + New event
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/host/templates" className="text-sm text-textMuted hover:text-textPrimary">
+            Templates
+          </Link>
+          <Link
+            href="/host/events/new"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-canvas transition hover:opacity-90"
+          >
+            + New event
+          </Link>
+        </div>
       </div>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
