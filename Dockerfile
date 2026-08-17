@@ -30,5 +30,4 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 EXPOSE 3001
 
-CMD ["node", "dist/server.js"]
-# CMD ["sh", "-c", "node dist/server.js & SERVER_PID=$!; echo 'Waiting for Fastify to become ready...'; until nc -z 127.0.0.1 ${PORT:-3001}; do sleep 1; done; echo 'Fastify is ready. Starting click-log worker...'; npm run worker:clicklog:start & WORKER_PID=$!; wait $SERVER_PID $WORKER_PID"]
+CMD ["sh", "-c", "node dist/server.js & SERVER_PID=$!; echo 'Waiting for Fastify to become ready...'; until nc -z 127.0.0.1 ${PORT:-3001}; do sleep 1; done; echo 'Fastify is ready. Starting click-log worker...'; npm run worker:clicklog:start & WORKER_PID=$!; wait $SERVER_PID $WORKER_PID"]
