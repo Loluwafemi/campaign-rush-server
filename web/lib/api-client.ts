@@ -1,4 +1,4 @@
-const API_BASE_URL = "campaign-rush-server-production.up.railway.app"
+const API_BASE_URL = "https://campaign-rush-server-production.up.railway.app/"
  // process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 
 export type ClickStatus = "VALID" | "DUPLICATE" | "BOT";
