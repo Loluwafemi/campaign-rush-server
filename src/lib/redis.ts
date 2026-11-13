@@ -12,7 +12,7 @@ const log = createLogger("redis");
  * own separate connection (see workers/clickLogProcessor.ts) so its
  * blocking BLPOP calls never contend with this one.
  */
-export const redis = new Redis(env.REDIS_URL, {
+export const redis = new Redis(env.REDIS_PUBLIC_URL, {
   maxRetriesPerRequest: 2,
   enableAutoPipelining: true,
   lazyConnect: false,

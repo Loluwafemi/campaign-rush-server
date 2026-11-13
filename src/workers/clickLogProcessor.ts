@@ -13,7 +13,7 @@ const log = createLogger("click-log-worker");
  * any future blocking reads here never compete with the redirect
  * route's traffic.
  */
-const workerRedis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2 });
+const workerRedis = new Redis(env.REDIS_PUBLIC_URL, { maxRetriesPerRequest: 2 });
 
 workerRedis.on("connect", () => log.info("Worker Redis connection established"));
 workerRedis.on("error", (err) => log.error({ err }, "Worker Redis connection error"));

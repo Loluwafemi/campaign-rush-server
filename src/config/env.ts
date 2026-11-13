@@ -13,7 +13,7 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-  REDIS_URL: z.string().min(1, "REDIS_URL is required"),
+  REDIS_PUBLIC_URL: z.string().min(1, "REDIS_PUBLIC_URL is required"),
 
   // Public origin used to build shareable participant links
   // e.g. https://domain.com/chat/{refCode}
